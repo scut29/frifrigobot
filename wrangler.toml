@@ -1,0 +1,14 @@
+name = "frifrigobot"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+[observability]
+enabled = false
+[triggers]
+crons = ["*/15 * * * *"]
+[[d1_databases]]
+binding = "DB"
+database_name = "frifrigobot"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "."
+# Secrets required: BOT_TOKEN, WEBHOOK_SECRET, CHAT_ID, ALLOWED_USER_IDS

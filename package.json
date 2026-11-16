@@ -1,0 +1,33 @@
+{
+  "name": "frifrigobot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "npm run db:migrations:apply && wrangler deploy",
+    "db:migrations:apply": "wrangler d1 migrations apply DB --remote",
+    "check": "node --check worker.js"
+  },
+  "devDependencies": {
+    "wrangler": "4.163.0"
+  },
+  "cloudflare": {
+    "bindings": {
+      "DB": {
+        "description": "Database D1 dedicato al solo inventario domestico."
+      },
+      "BOT_TOKEN": {
+        "description": "Token del bot @Frifrigobot fornito da BotFather. Inseriscilo qui: resterà un segreto Cloudflare, fuori dal repository."
+      },
+      "WEBHOOK_SECRET": {
+        "description": "Scegli una stringa casuale di almeno 32 caratteri alfanumerici. Protegge il webhook Telegram."
+      },
+      "CHAT_ID": {
+        "description": "ID numerico del solo gruppo Telegram privato autorizzato."
+      },
+      "ALLOWED_USER_IDS": {
+        "description": "I due ID numerici Telegram autorizzati, separati da virgola."
+      }
+    }
+  }
+}
