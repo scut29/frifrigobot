@@ -1127,7 +1127,7 @@ var worker_default = {
       if (response) return response;
     }
     if (path === "/health" && request.method === "GET")
-      return new Response("Frifrigobot online", {
+      return new Response("Frifrigobot online · versione 1.0.1", {
         headers: { "Cache-Control": "no-store" }
       });
     if (path !== "/telegram" || request.method !== "POST")

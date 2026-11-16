@@ -23,8 +23,12 @@ Dopo la pubblicazione aprire `/setup` sull’indirizzo del Worker e inserire il 
 
 Inventario per confezione, aggiunta guidata con durata ricordata, apertura oggi o precedente, scadenza minima fra confezione e dopo apertura, categorie, quantità, modifiche, terminato, annullamento, CSV con recupero, notifiche alle 8 italiane configurabili e ora legale automatica. Menu in italiano.
 
-Le prove reali sui telefoni e la pubblicazione devono ancora essere completate. I test locali non attestano il funzionamento online. La Bot API non consente una garanzia assoluta di invio esattamente una volta dopo una risposta di rete persa: la coda persistente deduplica gli invii ordinari e ritenta gli errori.
+Il servizio è pubblicato. Sono in corso i collaudi reali nel gruppo Telegram e la verifica dei due telefoni. La Bot API non consente una garanzia assoluta di invio esattamente una volta dopo una risposta di rete persa: la coda persistente deduplica gli invii ordinari e ritenta gli errori.
 
 ## Creazione D1 nel deploy ordinario
 
 Il comando `npm run deploy` ora esegue `deploy.mjs`: cerca il database per nome, lo crea solo se assente, scrive il suo ID reale in una configurazione temporanea esclusa da Git, applica le migrazioni e pubblica il Worker. I deploy successivi riutilizzano lo stesso database. Il token usato da Workers Builds deve avere anche **Account → D1 → Edit**. I token creati automaticamente da Workers Builds possono non includere questo permesso; si modifica dal profilo Cloudflare, senza condividere il token. Nessuna operazione attiva piani a pagamento.
+
+## Versione 1.0.1
+
+La pagina `/health` riporta la versione del Worker per distinguere le pubblicazioni e verificare la persistenza dei dati D1 dopo il ricambio del runtime.
