@@ -1,8 +1,5 @@
-var __defProp = Object.defineProperty;
-var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
-
 // src/activation.js
-var page = /* @__PURE__ */ __name((content, status = 200) => new Response(
+var page = (content, status = 200) => new Response(
   `<!doctype html><html lang="it"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Attiva Frifrigobot</title><style>body{font:18px system-ui;max-width:540px;margin:8vh auto;padding:24px;background:#f2f8f5;color:#173d32}main{padding:28px;border-radius:20px;background:white}input,button{font:inherit;box-sizing:border-box;width:100%;padding:14px;margin-top:12px;border:1px solid #bdd4c9;border-radius:10px}button{background:#176b50;color:white;cursor:pointer}p{line-height:1.5}label{display:block}</style><main><h1>\u{1F9CA} Frifrigobot</h1>${content}</main></html>`,
   {
     status,
@@ -14,7 +11,7 @@ var page = /* @__PURE__ */ __name((content, status = 200) => new Response(
       "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
     }
   }
-), "page");
+);
 async function activation(request, env) {
   const url = new URL(request.url);
   if (url.pathname === "/setup" && request.method === "GET")
@@ -91,7 +88,6 @@ async function activation(request, env) {
     );
   }
 }
-__name(activation, "activation");
 
 // src/domain.js
 var fmt = new Intl.DateTimeFormat("en-CA", {
@@ -108,19 +104,16 @@ function rome(now = /* @__PURE__ */ new Date()) {
   );
   return { date: `${p.year}-${p.month}-${p.day}`, hour: Number(p.hour) };
 }
-__name(rome, "rome");
 function addDays(d, n) {
   const x = /* @__PURE__ */ new Date(`${d}T12:00:00Z`);
   x.setUTCDate(x.getUTCDate() + n);
   return x.toISOString().slice(0, 10);
 }
-__name(addDays, "addDays");
 function daysBetween(a, b) {
   return Math.round(
     (Date.parse(b + "T12:00:00Z") - Date.parse(a + "T12:00:00Z")) / 864e5
   );
 }
-__name(daysBetween, "daysBetween");
 function parseDate(s) {
   s = s.trim();
   let d;
@@ -133,39 +126,39 @@ function parseDate(s) {
   const dt = /* @__PURE__ */ new Date(d + "T12:00:00Z");
   return !isNaN(dt) && dt.toISOString().slice(0, 10) === d && d >= "2000-01-01" && d <= "2100-12-31" ? d : null;
 }
-__name(parseDate, "parseDate");
-var displayDate = /* @__PURE__ */ __name((d) => d ? d.split("-").reverse().join("/") : "non indicata", "displayDate");
+var displayDate = (d) => d ? d.split("-").reverse().join("/") : "non indicata";
+var tracksOpening = (p) => p.track_opening !== 0;
 function expiry(p) {
-  const a = p.opened_date ? addDays(p.opened_date, p.after_days) : null;
+  const a = tracksOpening(p) && p.opened_date ? addDays(p.opened_date, p.after_days) : null;
   return a && p.original_date ? a < p.original_date ? a : p.original_date : a || p.original_date || null;
 }
-__name(expiry, "expiry");
 function group(p, today) {
   if (p.finished) return 5;
   const e = expiry(p), d = e ? daysBetween(today, e) : Infinity;
   return d < 0 ? 0 : d === 0 ? 1 : d <= 3 ? 2 : p.opened_date ? 3 : 4;
 }
-__name(group, "group");
-var titles = [
-  "\u{1F534} Scaduti",
-  "\u{1F7E0} Da consumare oggi",
-  "\u{1F7E1} Entro 3 giorni",
-  "\u{1F7E2} Aperti",
-  "\u{1F535} Chiusi"
-];
+function expiryTitle(p, today) {
+  const e = expiry(p);
+  if (!e) return "\u26AA Senza scadenza indicata";
+  const n = daysBetween(today, e);
+  return n < 0 ? "\u{1F534} Scaduti" : n === 0 ? "\u{1F7E0} Da consumare oggi" : n === 1 ? "\u{1F7E1} Entro domani" : `\u{1F7E2} Restano ${n} giorni`;
+}
+function packageLabel(p, ps) {
+  const same = ps.filter((x) => x.name === p.name);
+  const suffix = same.length > 1 ? ` \xB7 confezione ${same.findIndex((x) => x.id === p.id) + 1}` : "";
+  return `${p.name}${suffix}`;
+}
 function sorted(ps, today) {
   return [...ps].sort(
-    (a, b) => group(a, today) - group(b, today) || (expiry(a) || "9999").localeCompare(expiry(b) || "9999") || a.name.localeCompare(b.name)
+    (a, b) => (expiry(a) || "9999").localeCompare(expiry(b) || "9999") || a.name.localeCompare(b.name) || a.id.localeCompare(b.id)
   );
 }
-__name(sorted, "sorted");
 function remaining(p, today) {
   const e = expiry(p);
   if (!e) return "nessuna scadenza indicata";
   const n = daysBetween(today, e);
   return n < 0 ? `scaduto da ${-n} giorni` : n === 0 ? "entro oggi" : n === 1 ? "entro domani" : `restano ${n} giorni`;
 }
-__name(remaining, "remaining");
 function csv(ps) {
   const cols = [
     "id",
@@ -175,13 +168,18 @@ function csv(ps) {
     "after_days",
     "opened_date",
     "quantity",
-    "finished"
+    "finished",
+    "track_opening"
   ];
-  return "\uFEFF" + [cols, ...ps.map((p) => cols.map((k) => p[k] ?? ""))].map(
+  return "\uFEFF" + [
+    cols,
+    ...ps.map(
+      (p) => cols.map((k) => k === "track_opening" ? p[k] ?? 1 : p[k] ?? "")
+    )
+  ].map(
     (row) => row.map((v) => '"' + String(v).replaceAll('"', '""') + '"').join(",")
   ).join("\r\n");
 }
-__name(csv, "csv");
 function readCSV(text) {
   text = text.replace(/^\uFEFF/, "");
   const rows = [];
@@ -221,13 +219,14 @@ function readCSV(text) {
     "quantity",
     "finished"
   ];
-  if (!cols || cols.join() !== expected.join())
+  const legacy = cols?.join() === expected.join();
+  if (!cols || !legacy && cols.join() !== [...expected, "track_opening"].join())
     throw Error("Usa un CSV esportato da Frifrigobot");
   if (rows.length > 100)
     throw Error("Importa al massimo 100 confezioni per file");
   const ids = /* @__PURE__ */ new Set();
   return rows.map((r) => {
-    if (r.length !== 8) throw Error("Colonne CSV non valide");
+    if (r.length !== cols.length) throw Error("Colonne CSV non valide");
     let p = Object.fromEntries(cols.map((k, i) => [k, r[i]]));
     if (!/^[\w-]{1,40}$/.test(p.id) || ids.has(p.id) || !p.name.trim() || p.name.length > 80 || p.category.length > 60 || p.quantity.length > 60 || !/^\d+$/.test(p.after_days) || +p.after_days < 1 || +p.after_days > 365 || !["0", "1"].includes(p.finished))
       throw Error("Valori CSV non validi");
@@ -237,33 +236,36 @@ function readCSV(text) {
     }
     if (p.opened_date && p.opened_date > rome().date)
       throw Error("Apertura futura non valida");
+    const track_opening = legacy ? 1 : Number(p.track_opening);
+    if (!legacy && !["0", "1"].includes(p.track_opening) || !track_opening && p.opened_date)
+      throw Error("Modalit\xE0 apertura CSV non valida");
     ids.add(p.id);
     return {
       ...p,
       name: p.name.trim(),
+      track_opening,
       after_days: +p.after_days,
       finished: +p.finished
     };
   });
 }
-__name(readCSV, "readCSV");
 
 // src/worker.js
-var btn = /* @__PURE__ */ __name((text, callback_data) => ({ text, callback_data }), "btn");
-var keys = /* @__PURE__ */ __name((inline_keyboard) => ({ inline_keyboard }), "keys");
-var home = /* @__PURE__ */ __name(() => keys([
+var btn = (text, callback_data) => ({ text, callback_data });
+var keys = (inline_keyboard) => ({ inline_keyboard });
+var home = () => keys([
   [btn("\u{1F9CA} Il mio frigo", "list:all:0"), btn("\u2795 Aggiungi prodotto", "add")],
   [
     btn("\u{1F513} Apri prodotto", "list:closed:0"),
     btn("\u23F0 Scadenze", "list:due:0")
   ],
   [btn("\u2699\uFE0F Impostazioni", "settings")]
-]), "home");
-var esc = /* @__PURE__ */ __name((s) => String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;"), "esc");
-var key = /* @__PURE__ */ __name((s) => s.trim().normalize("NFKC").toLocaleLowerCase("it"), "key");
-var uid = /* @__PURE__ */ __name(() => crypto.randomUUID().replaceAll("-", "").slice(0, 16), "uid");
-var all = /* @__PURE__ */ __name(async (db, sql, ...p) => (await db.prepare(sql).bind(...p).all()).results, "all");
-var one = /* @__PURE__ */ __name((db, sql, ...p) => db.prepare(sql).bind(...p).first(), "one");
+]);
+var esc = (s) => String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+var key = (s) => s.trim().normalize("NFKC").toLocaleLowerCase("it");
+var uid = () => crypto.randomUUID().replaceAll("-", "").slice(0, 16);
+var all = async (db, sql, ...p) => (await db.prepare(sql).bind(...p).all()).results;
+var one = (db, sql, ...p) => db.prepare(sql).bind(...p).first();
 var fields = [
   "name",
   "category",
@@ -271,12 +273,10 @@ var fields = [
   "after_days",
   "opened_date",
   "quantity",
-  "finished"
+  "finished",
+  "track_opening"
 ];
 var Plan = class {
-  static {
-    __name(this, "Plan");
-  }
   constructor(env, id, user) {
     this.env = env;
     this.id = id;
@@ -409,7 +409,6 @@ async function telegram(env, method, body) {
   }
   return data.result;
 }
-__name(telegram, "telegram");
 async function flush(env, now = Date.now()) {
   const rows = await all(
     env.DB,
@@ -466,39 +465,39 @@ async function flush(env, now = Date.now()) {
     }
   }
 }
-__name(flush, "flush");
 async function list(plan, mode = "all", page2 = 0) {
   const today = rome().date;
   let ps = sorted(
     await all(plan.env.DB, "SELECT * FROM products WHERE finished=0"),
     today
   );
-  if (mode === "closed") ps = ps.filter((p) => !p.opened_date);
-  if (mode === "due") ps = ps.filter((p) => group(p, today) <= 2);
+  if (mode === "closed")
+    ps = ps.filter((p) => tracksOpening(p) && !p.opened_date);
+  if (mode === "due") ps = ps.filter((p) => expiry(p));
   page2 = Math.max(
     0,
     Math.min(page2, Math.max(0, Math.ceil(ps.length / 10) - 1))
   );
   const chunk = ps.slice(page2 * 10, page2 * 10 + 10);
   let text = mode === "closed" ? "\u{1F513} <b>Scegli una confezione da aprire</b>" : "\u{1F9CA} <b>Il nostro frigo</b>";
-  let prev = -1;
+  let prev = null;
   for (const p of chunk) {
-    const g = group(p, today);
+    const g = expiryTitle(p, today);
     if (g !== prev) {
       text += `
 
-<b>${titles[g]}</b>`;
+<b>${g}</b>`;
       prev = g;
     }
     text += `
-\u2022 <b>${esc(p.name)}</b> \xB7 ${esc(p.quantity)} \xB7 #${p.id.slice(-4)}
+\u2022 <b>${esc(packageLabel(p, ps))}</b> \xB7 ${esc(p.quantity)}
   ${remaining(p, today)}${p.opened_date ? " \xB7 aperto " + displayDate(p.opened_date) : ""}`;
   }
   if (!ps.length) text += "\nNessun prodotto in questa vista.";
   text += "\n\nTocca una confezione per gestirla. Le date sono giorni italiani; \u201Coggi\u201D termina a mezzanotte.";
   const rows = chunk.map((p) => [
     btn(
-      `${p.opened_date ? "\u{1F513}" : "\u{1F4E6}"} ${p.name} \xB7 #${p.id.slice(-4)}`,
+      `${!tracksOpening(p) ? "\u{1F4C5}" : p.opened_date ? "\u{1F513}" : "\u{1F4E6}"} ${packageLabel(p, ps)}`,
       `item:${p.id}`
     )
   ]);
@@ -510,11 +509,10 @@ async function list(plan, mode = "all", page2 = 0) {
   rows.push([btn("\u2795 Aggiungi", "add"), btn("\u{1F3E0} Menu", "home")]);
   plan.send(text, keys(rows));
 }
-__name(list, "list");
 function card(plan, p) {
   const v = `${p.id}:${p.version}`, rows = [];
   if (!p.finished) {
-    if (!p.opened_date)
+    if (tracksOpening(p) && !p.opened_date)
       rows.push([
         btn("\u{1F513} Apri oggi", `open:${v}`),
         btn("\u{1F4C5} Apertura precedente", `date:${v}`)
@@ -526,17 +524,16 @@ function card(plan, p) {
   } else rows.push([btn("\u21A9\uFE0F Ripristina", `restore:${v}`)]);
   rows.push([btn("\u{1F9CA} Inventario", "list:all:0")]);
   plan.send(
-    `${p.finished ? "\u2705" : "\u{1F4E6}"} <b>${esc(p.name)}</b> \xB7 #${p.id.slice(-4)}
+    `${p.finished ? "\u2705" : "\u{1F4E6}"} <b>${esc(p.name)}</b>
 ${esc(p.quantity)}${p.category ? " \xB7 " + esc(p.category) : ""}
-Confezione: ${displayDate(p.original_date)}
+Confezione: ${displayDate(p.original_date)}${tracksOpening(p) ? `
 Dopo apertura: ${p.after_days} giorni
-Aperto: ${displayDate(p.opened_date)}
+Aperto: ${displayDate(p.opened_date)}` : "\n\u{1F4C5} Solo scadenza della confezione"}
 Da consumare entro: <b>${displayDate(expiry(p))}</b>
 ${p.finished ? "Terminato" : remaining(p, rome().date)}`,
     keys(rows)
   );
 }
-__name(card, "card");
 async function change(plan, p, patch) {
   const next = { ...p, ...patch, version: p.version + 1 }, undoId = uid();
   plan.add(
@@ -551,7 +548,7 @@ async function change(plan, p, patch) {
   );
   plan.add(
     `UPDATE products SET ${fields.map((k) => k + "=?").join(",")},version=version+1,updated_at=?,last_event=? WHERE id=? AND version=? AND {G}`,
-    ...fields.map((k) => next[k]),
+    ...fields.map((k) => k === "track_opening" ? next[k] ?? 1 : next[k]),
     (/* @__PURE__ */ new Date()).toISOString(),
     plan.tag,
     p.id,
@@ -576,37 +573,33 @@ ${next.finished ? "Confezione terminata." : remaining(next, rome().date) + " \xB
     [p.id, plan.tag]
   );
 }
-__name(change, "change");
 async function askDays(plan, d) {
   const t = await one(
     plan.env.DB,
     "SELECT * FROM templates WHERE name_key=?",
     key(d.name)
   );
-  if (t) {
-    const token = plan.session({ ...d, category: t.category, step: "days" });
-    plan.send(
-      `<b>${esc(d.name)}</b>
-Ricordo: <b>${t.after_days} giorni dall\u2019apertura</b>.`,
-      keys([
-        [
-          btn(
-            `Usa ${t.after_days} giorni`,
-            `wiz:${token}:days:${t.after_days}`
-          ),
-          btn("Cambia", `wiz:${token}:customdays`)
-        ],
-        [btn("Annulla", `cancel:${token}`)]
-      ])
-    );
-  } else
-    plan.prompt(
-      { ...d, step: "days" },
-      `Entro quanti giorni dall\u2019apertura va consumato <b>${esc(d.name)}</b>?
-Leggi la confezione (da 1 a 365).`
-    );
+  const token = plan.session({
+    ...d,
+    category: t?.category || d.category || "",
+    step: "days"
+  });
+  const rows = [];
+  if (t && tracksOpening(t))
+    rows.push([
+      btn(`Usa ${t.after_days} giorni`, `wiz:${token}:days:${t.after_days}`)
+    ]);
+  rows.push([btn("\u{1F4C5} Solo scadenza", `wiz:${token}:noopening`)]);
+  rows.push([btn("\u{1F513} Giorni dopo apertura", `wiz:${token}:customdays`)]);
+  rows.push([btn("Annulla", `cancel:${token}`)]);
+  plan.send(
+    `<b>${esc(d.name)}</b>
+${t ? tracksOpening(t) ? `Ricordo: <b>${t.after_days} giorni dall\u2019apertura</b>.
+` : "Ricordo: solo scadenza della confezione.\n" : ""}Come vuoi gestire la scadenza?
+Per uova e prodotti senza apertura scegli <b>Solo scadenza</b>.`,
+    keys(rows)
+  );
 }
-__name(askDays, "askDays");
 function askOriginal(plan, d) {
   const token = plan.session({ ...d, step: "original" });
   plan.send(
@@ -620,19 +613,17 @@ function askOriginal(plan, d) {
     ])
   );
 }
-__name(askOriginal, "askOriginal");
 function review(plan, d) {
   const token = plan.session({ ...d, step: "review", count: d.count || 1 });
   plan.send(
     `\u{1F4E6} <b>${esc(d.name)}</b>
 ${d.count || 1} confezioni separate
-Dopo apertura: ${d.after_days} giorni
-Scadenza confezione: ${displayDate(d.original_date)}${d.category ? "\nCategoria: " + esc(d.category) : ""}
-Le confezioni vengono aggiunte chiuse.`,
+${tracksOpening(d) ? `Dopo apertura: ${d.after_days} giorni` : "\u{1F4C5} Solo scadenza della confezione"}
+Scadenza confezione: ${displayDate(d.original_date)}${d.category ? "\nCategoria: " + esc(d.category) : ""}${tracksOpening(d) ? "\nLe confezioni vengono aggiunte chiuse." : ""}`,
     keys([
       [
         btn("\u2705 Salva", `wiz:${token}:save`),
-        btn("\u{1F513} Salva e apri oggi", `wiz:${token}:saveopen`)
+        ...tracksOpening(d) ? [btn("\u{1F513} Salva e apri oggi", `wiz:${token}:saveopen`)] : []
       ],
       [
         btn("\u{1F4E6} Numero confezioni", `wiz:${token}:count`),
@@ -642,7 +633,6 @@ Le confezioni vengono aggiunte chiuse.`,
     ])
   );
 }
-__name(review, "review");
 async function settings(plan) {
   const s = await one(plan.env.DB, "SELECT * FROM settings WHERE id=1");
   plan.send(
@@ -659,7 +649,6 @@ Le durate seguono l\u2019etichetta; non verificano lo stato dell\u2019alimento.`
     ])
   );
 }
-__name(settings, "settings");
 async function handleText(plan, m, session) {
   const text = m.text?.trim() || "", command = text.split("@")[0];
   if (["/start", "/menu", "/frigo"].includes(command)) {
@@ -730,7 +719,7 @@ Gli ID gi\xE0 presenti saranno ignorati.`,
       plan.prompt(s, "Inserisci un numero intero da 1 a 365.");
       return;
     }
-    askOriginal(plan, { ...s, after_days: +text });
+    askOriginal(plan, { ...s, after_days: +text, track_opening: 1 });
     return;
   }
   if (s.step === "original") {
@@ -807,11 +796,13 @@ Gli ID gi\xE0 presenti saranno ignorati.`,
       if (s.field === "category" && value === "-") value = "";
     }
     plan.clear();
-    await change(plan, p, { [s.field]: value });
+    await change(plan, p, {
+      [s.field]: value,
+      ...s.field === "after_days" ? { track_opening: 1 } : {}
+    });
     return;
   }
 }
-__name(handleText, "handleText");
 async function callback(plan, data, session) {
   const [op, a, b, c] = data.split(":"), s = session ? JSON.parse(session.data) : null;
   if (op === "home") {
@@ -870,9 +861,7 @@ async function callback(plan, data, session) {
     plan.send(
       "\u{1F4DA} Ultime 15 confezioni terminate",
       keys([
-        ...ps.map((p) => [
-          btn(`${p.name} \xB7 #${p.id.slice(-4)}`, `item:${p.id}`)
-        ]),
+        ...ps.map((p) => [btn(packageLabel(p, ps), `item:${p.id}`)]),
         [btn("\u{1F3E0} Menu", "home")]
       ])
     );
@@ -897,7 +886,7 @@ async function callback(plan, data, session) {
   if (op === "importconfirm" && s?.step === "importconfirm" && session.token === a) {
     plan.expectedSession = a;
     plan.add(
-      `INSERT OR IGNORE INTO products(id,${fields.join(",")},updated_at) SELECT json_extract(value,'$.id'),${fields.map((k) => "json_extract(value,'$." + k + "')").join(",")},? FROM json_each(?) WHERE {G}`,
+      `INSERT OR IGNORE INTO products(id,${fields.join(",")},updated_at) SELECT json_extract(value,'$.id'),${fields.map((k) => k === "track_opening" ? "coalesce(json_extract(value,'$.track_opening'),1)" : "json_extract(value,'$." + k + "')").join(",")},? FROM json_each(?) WHERE {G}`,
       (/* @__PURE__ */ new Date()).toISOString(),
       JSON.stringify(s.rows)
     );
@@ -914,7 +903,9 @@ async function callback(plan, data, session) {
       return;
     }
     if (b === "days" && s.step === "days" && /^\d+$/.test(c) && +c >= 1 && +c <= 365)
-      askOriginal(plan, { ...s, after_days: +c });
+      askOriginal(plan, { ...s, after_days: +c, track_opening: 1 });
+    else if (b === "noopening" && s.step === "days")
+      askOriginal(plan, { ...s, after_days: 1, track_opening: 0 });
     else if (b === "customdays" && s.step === "days")
       plan.prompt(s, "Quanti giorni dopo l\u2019apertura? Da 1 a 365.");
     else if (b === "original" && s.step === "original")
@@ -934,22 +925,24 @@ async function callback(plan, data, session) {
     else if (["save", "saveopen"].includes(b) && s.step === "review") {
       for (let i = 0; i < (s.count || 1); i++)
         plan.add(
-          "INSERT INTO products(id,name,category,original_date,after_days,opened_date,quantity,updated_at) SELECT ?,?,?,?,?,?,?,? WHERE {G}",
+          "INSERT INTO products(id,name,category,original_date,after_days,opened_date,quantity,updated_at,track_opening) SELECT ?,?,?,?,?,?,?,?,? WHERE {G}",
           uid(),
           s.name,
           s.category || "",
           s.original_date || null,
           s.after_days,
-          b === "saveopen" ? rome().date : null,
+          b === "saveopen" && tracksOpening(s) ? rome().date : null,
           "1 confezione",
-          (/* @__PURE__ */ new Date()).toISOString()
+          (/* @__PURE__ */ new Date()).toISOString(),
+          s.track_opening ?? 1
         );
       plan.add(
-        "INSERT INTO templates(name_key,name,after_days,category) SELECT ?,?,?,? WHERE {G} ON CONFLICT(name_key) DO UPDATE SET after_days=excluded.after_days,category=excluded.category",
+        "INSERT INTO templates(name_key,name,after_days,category,track_opening) SELECT ?,?,?,?,? WHERE {G} ON CONFLICT(name_key) DO UPDATE SET after_days=excluded.after_days,category=excluded.category,track_opening=excluded.track_opening",
         key(s.name),
         s.name,
         s.after_days,
-        s.category || ""
+        s.category || "",
+        s.track_opening ?? 1
       );
       plan.clear();
       plan.send(
@@ -982,7 +975,15 @@ async function callback(plan, data, session) {
     await change(plan, p, JSON.parse(u.snapshot));
     return;
   }
-  if (["open", "date", "finish", "restore", "edit", "field"].includes(op)) {
+  if ([
+    "open",
+    "date",
+    "finish",
+    "restore",
+    "edit",
+    "field",
+    "noopening"
+  ].includes(op)) {
     const p = await one(plan.env.DB, "SELECT * FROM products WHERE id=?", a);
     if (!p || p.version !== +b) {
       plan.send(
@@ -991,7 +992,21 @@ async function callback(plan, data, session) {
       );
       return;
     }
-    if (op === "open" && !p.finished && !p.opened_date)
+    if ((op === "open" || op === "date" || op === "field" && c === "opened_date") && !tracksOpening(p)) {
+      plan.send("Questo prodotto usa solo la scadenza sulla confezione.");
+      return;
+    }
+    if (op === "noopening" && !p.finished) {
+      await change(plan, p, {
+        track_opening: 0,
+        opened_date: null,
+        after_days: 1
+      });
+      plan.add(
+        "UPDATE templates SET track_opening=0,after_days=1 WHERE name_key=? AND {G}",
+        key(p.name)
+      );
+    } else if (op === "open" && !p.finished && !p.opened_date)
       await change(plan, p, { opened_date: rome().date });
     else if (op === "finish" && !p.finished)
       await change(plan, p, { finished: 1 });
@@ -1008,14 +1023,17 @@ async function callback(plan, data, session) {
             ["Giorni dopo apertura", "after_days"],
             ["Data apertura / richiudi", "opened_date"],
             ["Quantit\xE0 descrittiva", "quantity"]
-          ].map(([label, f]) => [
+          ].filter(([, f]) => tracksOpening(p) || f !== "opened_date").map(([label, f]) => [
             btn(label, `field:${p.id}:${p.version}:${f}`)
+          ]).concat([
+            [btn("\u{1F4C5} Solo scadenza", `noopening:${p.id}:${p.version}`)]
           ])
         )
       );
     else if (op === "date" || op === "field") {
       const field = op === "date" ? "opened_date" : c;
-      if (!fields.includes(field) || field === "finished") return;
+      if (!fields.includes(field) || ["finished", "track_opening"].includes(field))
+        return;
       plan.prompt(
         { step: "editfield", id: p.id, version: p.version, field },
         ["opened_date", "original_date"].includes(field) ? "Scrivi la data in formato GG/MM/AAAA. Scrivi - per rimuoverla." : field === "after_days" ? "Quanti giorni dopo l\u2019apertura? Da 1 a 365." : "Scrivi il nuovo valore."
@@ -1024,7 +1042,6 @@ async function callback(plan, data, session) {
     return;
   }
 }
-__name(callback, "callback");
 async function processUpdate(env, u) {
   const m = u.callback_query?.message || u.message, user = u.callback_query?.from || u.message?.from;
   if (!m || !user || user.is_bot || !Number.isSafeInteger(u.update_id)) return;
@@ -1053,7 +1070,6 @@ async function processUpdate(env, u) {
   await plan.commit();
   await flush(env);
 }
-__name(processUpdate, "processUpdate");
 async function scheduled(env, now = /* @__PURE__ */ new Date()) {
   const r = rome(now), s = await one(env.DB, "SELECT * FROM settings WHERE id=1");
   if (!s || r.hour < s.hour) {
@@ -1070,16 +1086,14 @@ async function scheduled(env, now = /* @__PURE__ */ new Date()) {
     if (!e) continue;
     const d = daysBetween(r.date, e);
     if (d === 1 && s.day_before || d === 0 && s.on_day)
-      alerts.push(
-        `\u2022 ${esc(p.name)} \xB7 #${p.id.slice(-4)}: ${remaining(p, r.date)}`
-      );
+      alerts.push(`\u2022 ${esc(packageLabel(p, ps))}: ${remaining(p, r.date)}`);
   }
   if (s.summary) {
     const checks = ps.filter((p) => group(p, r.date) <= 2);
     if (checks.length)
       alerts.push(
         "\n\u{1F4CB} Da controllare:\n" + checks.slice(0, 15).map(
-          (p) => `\u2022 ${esc(p.name)} \xB7 #${p.id.slice(-4)}: ${remaining(p, r.date)}`
+          (p) => `\u2022 ${esc(packageLabel(p, ps))}: ${remaining(p, r.date)}`
         ).join("\n")
       );
   }
@@ -1118,7 +1132,6 @@ async function scheduled(env, now = /* @__PURE__ */ new Date()) {
     )
   ]);
 }
-__name(scheduled, "scheduled");
 var worker_default = {
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
@@ -1127,7 +1140,7 @@ var worker_default = {
       if (response) return response;
     }
     if (path === "/health" && request.method === "GET")
-      return new Response("Frifrigobot online · versione 1.0.1", {
+      return new Response("Frifrigobot online \xB7 versione 1.1.0", {
         headers: { "Cache-Control": "no-store" }
       });
     if (path !== "/telegram" || request.method !== "POST")
@@ -1160,4 +1173,3 @@ export {
   scheduled,
   telegram
 };
-//# sourceMappingURL=worker.js.map

@@ -1,6 +1,6 @@
 {
   "name": "frifrigobot",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -18,7 +18,7 @@
         "description": "Database D1 dedicato al solo inventario domestico."
       },
       "BOT_TOKEN": {
-        "description": "Token del bot @Frifrigobot fornito da BotFather. Inseriscilo qui: resterà un segreto Cloudflare, fuori dal repository."
+        "description": "Token del bot @Frifrigobot fornito da BotFather. Inseriscilo qui: rester\u00e0 un segreto Cloudflare, fuori dal repository."
       },
       "WEBHOOK_SECRET": {
         "description": "Scegli una stringa casuale di almeno 32 caratteri alfanumerici. Protegge il webhook Telegram."

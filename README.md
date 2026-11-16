@@ -32,3 +32,12 @@ Il comando `npm run deploy` ora esegue `deploy.mjs`: cerca il database per nome,
 ## Versione 1.0.1
 
 La pagina `/health` riporta la versione del Worker per distinguere le pubblicazioni e verificare la persistenza dei dati D1 dopo il ricambio del runtime.
+
+## Versione 1.1.0
+
+- Nessun codice tecnico nei messaggi, nei pulsanti e nelle notifiche. Le confezioni omonime sono indicate come confezione 1, confezione 2.
+- All’aggiunta scegliere **Solo scadenza** oppure **Giorni dopo apertura**. La scelta viene ricordata. Nei dettagli **Modifica → Solo scadenza** converte un prodotto esistente; **Giorni dopo apertura** ripristina la gestione dell’apertura.
+- Inventario e Scadenze mostrano sezioni separate per ciascun giorno rimanente, indipendentemente dall’apertura.
+- La migrazione 0002 conserva i prodotti e corregge le uova inserite con la durata provvisoria di 365 giorni.
+- CSV aggiornato con modalità di apertura; lettura dei vecchi CSV ancora supportata.
+- 23 test automatici superati, inclusi migrazione, modalità senza apertura e raggruppamento giornaliero.
