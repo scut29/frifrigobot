@@ -1,0 +1,9 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {resolveDatabase} from './deploy.mjs';
+const zero='00000000-0000-0000-0000-000000000000',real='a1234567-1234-4234-8234-123456789abc';
+const config=`[[d1_databases]]\nbinding = "DB"\ndatabase_name = "frifrigobot"\ndatabase_id = "${zero}"\n`;
+test('trova e riutilizza il database senza crearne un altro',()=>{const calls=[];const out=resolveDatabase(config,args=>{calls.push(args);return JSON.stringify([{uuid:real,name:'frifrigobot'}]);});assert.match(out,new RegExp(real));assert.equal(calls.length,1);});
+test('crea una volta e sostituisce ID segnaposto prima delle migrazioni',()=>{const calls=[];let created=false;const out=resolveDatabase(config,args=>{calls.push(args);if(args[1]==='create'){created=true;return '';}return JSON.stringify(created?[{uuid:real,name:'frifrigobot'}]:[]);});assert.ok(!out.includes(zero));assert.equal(calls.filter(x=>x[1]==='create').length,1);assert.equal(calls.at(-1)[1],'list');});
+test('ripetere deploy riutilizza database persistente',()=>{let creates=0,created=false;const run=args=>{if(args[1]==='create'){creates++;created=true;return '';}return JSON.stringify(created?[{uuid:real,name:'frifrigobot'}]:[]);};resolveDatabase(config,run);resolveDatabase(config,run);assert.equal(creates,1);});
+test('errore autorizzazioni non diventa creazione o cambio piano',()=>{let calls=0;assert.throws(()=>resolveDatabase(config,()=>{calls++;throw Error('D1 forbidden');}),/forbidden/);assert.equal(calls,1);});
+test('database esplicito non trovato non viene sostituito',()=>{assert.throws(()=>resolveDatabase(config.replace(zero,real),()=>JSON.stringify([])),/sostitutivo/);});
+test('creazione simultanea da altra build viene riconosciuta',()=>{let lists=0;const out=resolveDatabase(config,args=>{if(args[1]==='create')throw Error('already exists');return JSON.stringify(++lists===1?[]:[{uuid:real,name:'frifrigobot'}]);});assert.match(out,new RegExp(real));});

@@ -4,9 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "deploy": "npm run db:migrations:apply && wrangler deploy",
+    "deploy": "node deploy.mjs",
     "db:migrations:apply": "wrangler d1 migrations apply DB --remote",
-    "check": "node --check worker.js"
+    "check": "node --check worker.js",
+    "test:deploy": "node --test deploy.test.mjs"
   },
   "devDependencies": {
     "wrangler": "4.163.0"

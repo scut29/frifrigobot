@@ -6,7 +6,7 @@ Bot Telegram condiviso per scadenze alimentari e durata dopo apertura. Cloudflar
 
 ## Contenuto
 
-`worker.js` è il bundle completo pronto per Cloudflare. `Frifrigobot-sorgenti.zip` contiene il codice modulare completo, i 13 test locali superati, il resoconto e la documentazione. Per sviluppare e verificare: estrarre i sorgenti, eseguire `npm ci` e `npm test` con Node 24. Nessuna credenziale è inclusa nel progetto.
+`worker.js` è il bundle completo pronto per Cloudflare. `Frifrigobot-sorgenti.zip` contiene il codice modulare completo, i 19 test locali superati, il resoconto e la documentazione. Per sviluppare e verificare: estrarre i sorgenti, eseguire `npm ci` e `npm test` con Node 24. Nessuna credenziale è inclusa nel progetto.
 
 ## Pubblicazione
 
@@ -24,3 +24,7 @@ Dopo la pubblicazione aprire `/setup` sull’indirizzo del Worker e inserire il 
 Inventario per confezione, aggiunta guidata con durata ricordata, apertura oggi o precedente, scadenza minima fra confezione e dopo apertura, categorie, quantità, modifiche, terminato, annullamento, CSV con recupero, notifiche alle 8 italiane configurabili e ora legale automatica. Menu in italiano.
 
 Le prove reali sui telefoni e la pubblicazione devono ancora essere completate. I test locali non attestano il funzionamento online. La Bot API non consente una garanzia assoluta di invio esattamente una volta dopo una risposta di rete persa: la coda persistente deduplica gli invii ordinari e ritenta gli errori.
+
+## Creazione D1 nel deploy ordinario
+
+Il comando `npm run deploy` ora esegue `deploy.mjs`: cerca il database per nome, lo crea solo se assente, scrive il suo ID reale in una configurazione temporanea esclusa da Git, applica le migrazioni e pubblica il Worker. I deploy successivi riutilizzano lo stesso database. Il token usato da Workers Builds deve avere anche **Account → D1 → Edit**. I token creati automaticamente da Workers Builds possono non includere questo permesso; si modifica dal profilo Cloudflare, senza condividere il token. Nessuna operazione attiva piani a pagamento.
