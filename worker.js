@@ -39,6 +39,7 @@ async function activation(request, env) {
     );
   try {
     await env.DB.prepare("SELECT id FROM settings WHERE id=1").first();
+    env = await resolveGroup(env, void 0, true);
     const me = await telegram(env, "getMe", {});
     if (me.username?.toLowerCase() !== "frifrigobot")
       return page(
@@ -408,9 +409,66 @@ async function telegram(env, method, body) {
     e.code = data.error_code;
     e.retry = data.parameters?.retry_after;
     e.description = data.description || "";
+    e.migrateTo = data.parameters?.migrate_to_chat_id;
     throw e;
   }
   return data.result;
+}
+var groupId = (id) => /^-\d+$/.test(String(id)) && Number.isSafeInteger(Number(id));
+async function resolveGroup(env, incomingId, probe = false) {
+  const original = String(env.CHAT_ID);
+  const saved = await one(
+    env.DB,
+    "SELECT current_id FROM chat_route WHERE original_id=?",
+    original
+  );
+  let current = saved?.current_id || original;
+  if (!probe && (incomingId === void 0 || String(incomingId) === current))
+    return { ...env, CHAT_ID: current };
+  const scoped = { ...env, CHAT_ID: current };
+  let target;
+  try {
+    const chat = await telegram(scoped, "getChat", { chat_id: current });
+    if (chat.type === "supergroup" && String(chat.id) === current)
+      return scoped;
+    if (chat.type === "supergroup" && groupId(chat.id) && String(chat.id) !== current)
+      target = String(chat.id);
+  } catch (e) {
+    if (groupId(e.migrateTo)) target = String(e.migrateTo);
+  }
+  if (!target) {
+    try {
+      await telegram(scoped, "sendChatAction", {
+        chat_id: current,
+        action: "typing"
+      });
+    } catch (e) {
+      if (groupId(e.migrateTo)) target = String(e.migrateTo);
+    }
+  }
+  if (!target || target === current) return scoped;
+  const stamp = (/* @__PURE__ */ new Date()).toISOString() + ":" + uid();
+  const guard = "EXISTS(SELECT 1 FROM chat_route WHERE original_id=? AND changed_at=?)";
+  await env.DB.batch([
+    env.DB.prepare(
+      "INSERT INTO chat_route(original_id,current_id,changed_at) VALUES(?,?,?) ON CONFLICT(original_id) DO UPDATE SET current_id=excluded.current_id,changed_at=excluded.changed_at WHERE chat_route.current_id=? AND chat_route.current_id<>excluded.current_id"
+    ).bind(original, target, stamp, current),
+    env.DB.prepare(
+      "UPDATE outbox SET status='sent',payload='{}' WHERE status='pending' AND json_extract(payload,'$.method')='ui' AND CAST(json_extract(payload,'$.body.chat_id') AS TEXT)=? AND " + guard
+    ).bind(current, original, stamp),
+    env.DB.prepare(
+      "UPDATE outbox SET payload=json_set(payload,'$.body.chat_id',?) WHERE status='pending' AND CAST(json_extract(payload,'$.body.chat_id') AS TEXT)=? AND " + guard
+    ).bind(target, current, original, stamp),
+    env.DB.prepare(
+      "UPDATE ui_panels SET message_id=NULL,kind=NULL,last_update_id=-1,lease_owner=NULL,lease_until=0 WHERE " + guard
+    ).bind(original, stamp),
+    env.DB.prepare("DELETE FROM ui_cleanup WHERE " + guard).bind(
+      original,
+      stamp
+    ),
+    env.DB.prepare("DELETE FROM sessions WHERE " + guard).bind(original, stamp)
+  ]);
+  return { ...env, CHAT_ID: target };
 }
 async function deliverPanel(env, r, p, now) {
   await env.DB.prepare("INSERT OR IGNORE INTO ui_panels(user_id) VALUES(?)").bind(r.user_id).run();
@@ -1177,8 +1235,10 @@ async function callback(plan, data, session) {
 async function processUpdate(env, u) {
   const m = u.callback_query?.message || u.message, user = u.callback_query?.from || u.message?.from;
   if (!m || !user || user.is_bot || !Number.isSafeInteger(u.update_id)) return;
-  if (!env.CHAT_ID || String(m.chat.id) !== String(env.CHAT_ID) || !["group", "supergroup"].includes(m.chat.type) || !String(env.ALLOWED_USER_IDS || "").split(",").map((x) => x.trim()).includes(String(user.id)))
+  if (!env.CHAT_ID || !["group", "supergroup"].includes(m.chat.type) || !String(env.ALLOWED_USER_IDS || "").split(",").map((x) => x.trim()).includes(String(user.id)))
     return;
+  env = await resolveGroup(env, m.chat.id);
+  if (String(m.chat.id) !== String(env.CHAT_ID)) return;
   if (await one(env.DB, "SELECT id FROM processed WHERE id=?", u.update_id)) {
     await flush(env);
     return;
@@ -1203,6 +1263,7 @@ async function processUpdate(env, u) {
   await flush(env);
 }
 async function scheduled(env, now = /* @__PURE__ */ new Date()) {
+  env = await resolveGroup(env, void 0, true);
   const r = rome(now), s = await one(env.DB, "SELECT * FROM settings WHERE id=1");
   if (!s || r.hour < s.hour) {
     await flush(env, now.getTime());
@@ -1271,10 +1332,19 @@ var worker_default = {
       const response = await activation(request, env);
       if (response) return response;
     }
-    if (path === "/health" && request.method === "GET")
-      return new Response("Frifrigobot online \xB7 versione 1.2.0", {
-        headers: { "Cache-Control": "no-store" }
-      });
+    if (path === "/health" && request.method === "GET") {
+      const route = await one(
+        env.DB,
+        "SELECT current_id FROM chat_route WHERE original_id=?",
+        String(env.CHAT_ID)
+      );
+      return new Response(
+        "Frifrigobot online \xB7 versione 1.2.1" + (route ? " \xB7 gruppo riallineato" : ""),
+        {
+          headers: { "Cache-Control": "no-store" }
+        }
+      );
+    }
     if (path !== "/telegram" || request.method !== "POST")
       return new Response("Not found", { status: 404 });
     if (!env.WEBHOOK_SECRET || request.headers.get("X-Telegram-Bot-Api-Secret-Token") !== env.WEBHOOK_SECRET)
@@ -1302,6 +1372,7 @@ export {
   worker_default as default,
   flush,
   processUpdate,
+  resolveGroup,
   scheduled,
   telegram
 };

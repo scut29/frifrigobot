@@ -47,3 +47,7 @@ La pagina `/health` riporta la versione del Worker per distinguere le pubblicazi
 Menu e inventario vengono aggiornati nello stesso messaggio. Le domande e le risposte di una procedura vengono rimosse dopo la consegna del passo successivo. Ogni utente ha il proprio pannello, per non cancellare la domanda ancora in uso dell’altra persona. Solo le risposte dirette alle domande del bot e i comandi riconosciuti vengono ripuliti; conversazioni, notifiche e CSV restano visibili. Il bot necessita del permesso di eliminare messaggi per ripulire anche le risposte degli utenti. I vecchi messaggi anteriori all’aggiornamento non vengono cancellati in blocco.
 
 Migrazione 0003: pannelli personali e coda persistente per ritentare le cancellazioni fallite. Gli alimenti non vengono modificati. Test: 29 superati, inclusi casi di risposta Telegram persa/rifiutata, pannello eliminato manualmente e procedure indipendenti. Pubblicazione e test reali ancora da completare.
+
+## Versione 1.2.1 — migrazione del gruppo
+
+Recupera il nuovo ID se il gruppo è stato convertito in supergruppo. Accetta esclusivamente un redirect confermato dalla Bot API per il gruppo già autorizzato; nomi e campi inoltrati da utenti non autorizzano altri gruppi. La relazione viene conservata in D1 ed è usata anche dal cron. Le confezioni non vengono toccate. Vecchi pannelli, procedure incomplete e cancellazioni riferite al vecchio gruppo vengono invalidati per evitare collisioni tra ID messaggio. 33 test automatici superati.
