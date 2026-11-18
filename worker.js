@@ -299,7 +299,9 @@ var Plan = class {
   }
   send(text, markup = home(), extra = {}, condition = "1", args = []) {
     const payload = {
-      method: "sendMessage",
+      method: extra._keep ? "sendMessage" : "ui",
+      update_id: this.id,
+      input_id: this.inputId || null,
       body: {
         chat_id: this.env.CHAT_ID,
         text,
@@ -313,7 +315,7 @@ var Plan = class {
       `${this.tag}:${this.seq++}`,
       JSON.stringify(payload),
       (/* @__PURE__ */ new Date()).toISOString(),
-      extra._session || null,
+      extra._session || this.outputSession || null,
       this.user,
       ...args
     );
@@ -328,6 +330,7 @@ var Plan = class {
   }
   session(s) {
     const token = uid();
+    this.outputSession = token;
     this.add(
       "INSERT INTO sessions(user_id,token,data,updated_at) SELECT ?,?,?,? WHERE {G} ON CONFLICT(user_id) DO UPDATE SET token=excluded.token,data=excluded.data,prompt_id=NULL,updated_at=excluded.updated_at",
       this.user,
@@ -350,8 +353,7 @@ var Plan = class {
         input_field_placeholder: "Scrivi qui\u2026"
       },
       {
-        _session: token,
-        ...this.messageId ? { reply_parameters: { message_id: this.messageId } } : {}
+        _session: token
       }
     );
   }
@@ -405,9 +407,117 @@ async function telegram(env, method, body) {
     const e = Error("Telegram API: " + response.status);
     e.code = data.error_code;
     e.retry = data.parameters?.retry_after;
+    e.description = data.description || "";
     throw e;
   }
   return data.result;
+}
+async function deliverPanel(env, r, p, now) {
+  await env.DB.prepare("INSERT OR IGNORE INTO ui_panels(user_id) VALUES(?)").bind(r.user_id).run();
+  const locked = await env.DB.prepare(
+    "UPDATE ui_panels SET lease_owner=?,lease_until=? WHERE user_id=? AND lease_until<=?"
+  ).bind(r.id, now + 6e4, r.user_id, now).run();
+  if (!locked.meta.changes) {
+    await env.DB.prepare("UPDATE outbox SET lease_until=? WHERE id=?").bind(now + 1e3, r.id).run();
+    return;
+  }
+  try {
+    const panel = await one(
+      env.DB,
+      "SELECT * FROM ui_panels WHERE user_id=?",
+      r.user_id
+    );
+    const active = r.session_token ? await one(
+      env.DB,
+      "SELECT token FROM sessions WHERE user_id=?",
+      r.user_id
+    ) : null;
+    if (p.update_id <= panel.last_update_id || r.session_token && active?.token !== r.session_token) {
+      await env.DB.prepare(
+        "UPDATE outbox SET status='sent',payload='{}' WHERE id=?"
+      ).bind(r.id).run();
+      return;
+    }
+    const body = { ...p.body };
+    delete body._session;
+    delete body._keep;
+    const kind = body.reply_markup?.force_reply ? "prompt" : "inline";
+    let messageId = null;
+    if (kind === "inline" && panel.kind === "inline" && panel.message_id) {
+      try {
+        await telegram(env, "editMessageText", {
+          ...body,
+          message_id: panel.message_id
+        });
+        messageId = panel.message_id;
+      } catch (e) {
+        if (e.code === 400 && /message is not modified/i.test(e.description))
+          messageId = panel.message_id;
+        else if (!(e.code === 400 && /message (?:to edit not found|can't be edited)|MESSAGE_ID_INVALID/i.test(
+          e.description
+        )))
+          throw e;
+      }
+    }
+    if (!messageId)
+      messageId = (await telegram(env, "sendMessage", body)).message_id;
+    const ss = [
+      env.DB.prepare(
+        "UPDATE ui_panels SET message_id=?,kind=?,last_update_id=? WHERE user_id=? AND lease_owner=?"
+      ).bind(messageId, kind, p.update_id, r.user_id, r.id),
+      env.DB.prepare(
+        "UPDATE outbox SET status='sent',message_id=?,payload='{}' WHERE id=?"
+      ).bind(messageId, r.id),
+      env.DB.prepare(
+        "UPDATE sessions SET prompt_id=? WHERE user_id=? AND token=?"
+      ).bind(messageId, r.user_id, r.session_token)
+    ];
+    for (const id of /* @__PURE__ */ new Set([
+      panel.message_id !== messageId ? panel.message_id : null,
+      p.input_id
+    ])) {
+      if (id && id !== messageId)
+        ss.push(
+          env.DB.prepare(
+            "INSERT OR IGNORE INTO ui_cleanup(message_id,user_id,created_at) VALUES(?,?,?)"
+          ).bind(id, r.user_id, new Date(now).toISOString())
+        );
+    }
+    await env.DB.batch(ss);
+  } finally {
+    await env.DB.prepare(
+      "UPDATE ui_panels SET lease_until=0,lease_owner=NULL WHERE user_id=? AND lease_owner=?"
+    ).bind(r.user_id, r.id).run();
+  }
+}
+async function cleanMessages(env, now) {
+  const jobs = await all(
+    env.DB,
+    "SELECT * FROM ui_cleanup WHERE next_attempt<=? ORDER BY created_at LIMIT 12",
+    now
+  );
+  for (const job of jobs) {
+    if (await one(
+      env.DB,
+      "SELECT user_id FROM ui_panels WHERE message_id=?",
+      job.message_id
+    ))
+      continue;
+    try {
+      await telegram(env, "deleteMessage", {
+        chat_id: env.CHAT_ID,
+        message_id: job.message_id
+      });
+      await env.DB.prepare("DELETE FROM ui_cleanup WHERE message_id=?").bind(job.message_id).run();
+    } catch (e) {
+      if ([400, 403].includes(e.code) || Date.parse(job.created_at) < now - 47 * 36e5) {
+        await env.DB.prepare("DELETE FROM ui_cleanup WHERE message_id=?").bind(job.message_id).run();
+      } else
+        await env.DB.prepare(
+          "UPDATE ui_cleanup SET next_attempt=? WHERE message_id=?"
+        ).bind(now + Math.max(6e4, (e.retry || 0) * 1e3), job.message_id).run();
+    }
+  }
 }
 async function flush(env, now = Date.now()) {
   const rows = await all(
@@ -423,7 +533,10 @@ async function flush(env, now = Date.now()) {
     try {
       const p = JSON.parse(r.payload);
       let result;
-      if (p.method === "csv") {
+      if (p.method === "ui") {
+        await deliverPanel(env, r, p, now);
+        continue;
+      } else if (p.method === "csv") {
         const form = new FormData();
         form.set("chat_id", env.CHAT_ID);
         form.set(
@@ -440,6 +553,7 @@ async function flush(env, now = Date.now()) {
         result = d.result;
       } else {
         delete p.body._session;
+        delete p.body._keep;
         result = await telegram(env, p.method, p.body);
       }
       await env.DB.batch([
@@ -464,6 +578,7 @@ async function flush(env, now = Date.now()) {
       console.error("outbox_delivery_failed", { code: e.code || 0 });
     }
   }
+  await cleanMessages(env, now);
 }
 async function list(plan, mode = "all", page2 = 0) {
   const today = rome().date;
@@ -652,6 +767,7 @@ Le durate seguono l\u2019etichetta; non verificano lo stato dell\u2019alimento.`
 async function handleText(plan, m, session) {
   const text = m.text?.trim() || "", command = text.split("@")[0];
   if (["/start", "/menu", "/frigo"].includes(command)) {
+    plan.inputId = m.message_id;
     plan.clear();
     plan.send(
       "\u{1F9CA} <b>Frifrigobot</b>\nIl frigo condiviso, una confezione alla volta."
@@ -659,12 +775,14 @@ async function handleText(plan, m, session) {
     return;
   }
   if (command === "/annulla") {
+    plan.inputId = m.message_id;
     plan.clear();
     plan.send("Operazione annullata.");
     return;
   }
   if (!session || m.reply_to_message?.message_id !== session.prompt_id) return;
   plan.expectedSession = session.token;
+  if (m.text) plan.inputId = m.message_id;
   const s = JSON.parse(session.data);
   if (Date.now() - Date.parse(session.updated_at) > 36e5) {
     plan.clear();
@@ -805,6 +923,18 @@ Gli ID gi\xE0 presenti saranno ignorati.`,
 }
 async function callback(plan, data, session) {
   const [op, a, b, c] = data.split(":"), s = session ? JSON.parse(session.data) : null;
+  if ([
+    "home",
+    "list",
+    "add",
+    "settings",
+    "item",
+    "history",
+    "export",
+    "hour",
+    "import"
+  ].includes(op))
+    plan.clear();
   if (op === "home") {
     plan.send("\u{1F9CA} <b>Frifrigobot</b>");
     return;
@@ -849,7 +979,9 @@ async function callback(plan, data, session) {
   }
   if (op === "testnotify") {
     plan.send(
-      "\u{1F514} Notifica di prova di Frifrigobot.\nIl bot pu\xF2 inviare messaggi in questo gruppo."
+      "\u{1F514} Notifica di prova di Frifrigobot.\nIl bot pu\xF2 inviare messaggi in questo gruppo.",
+      home(),
+      { _keep: true }
     );
     return;
   }
@@ -1140,7 +1272,7 @@ var worker_default = {
       if (response) return response;
     }
     if (path === "/health" && request.method === "GET")
-      return new Response("Frifrigobot online \xB7 versione 1.1.0", {
+      return new Response("Frifrigobot online \xB7 versione 1.2.0", {
         headers: { "Cache-Control": "no-store" }
       });
     if (path !== "/telegram" || request.method !== "POST")

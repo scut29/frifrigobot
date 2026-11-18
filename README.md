@@ -41,3 +41,9 @@ La pagina `/health` riporta la versione del Worker per distinguere le pubblicazi
 - La migrazione 0002 conserva i prodotti e corregge le uova inserite con la durata provvisoria di 365 giorni.
 - CSV aggiornato con modalità di apertura; lettura dei vecchi CSV ancora supportata.
 - 23 test automatici superati, inclusi migrazione, modalità senza apertura e raggruppamento giornaliero.
+
+## Versione 1.2.0 — chat compatta
+
+Menu e inventario vengono aggiornati nello stesso messaggio. Le domande e le risposte di una procedura vengono rimosse dopo la consegna del passo successivo. Ogni utente ha il proprio pannello, per non cancellare la domanda ancora in uso dell’altra persona. Solo le risposte dirette alle domande del bot e i comandi riconosciuti vengono ripuliti; conversazioni, notifiche e CSV restano visibili. Il bot necessita del permesso di eliminare messaggi per ripulire anche le risposte degli utenti. I vecchi messaggi anteriori all’aggiornamento non vengono cancellati in blocco.
+
+Migrazione 0003: pannelli personali e coda persistente per ritentare le cancellazioni fallite. Gli alimenti non vengono modificati. Test: 29 superati, inclusi casi di risposta Telegram persa/rifiutata, pannello eliminato manualmente e procedure indipendenti. Pubblicazione e test reali ancora da completare.
