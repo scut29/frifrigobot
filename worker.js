@@ -663,8 +663,7 @@ async function list(plan, mode = "all", page2 = 0) {
       prev = g;
     }
     text += `
-\u2022 <b>${esc(packageLabel(p, ps))}</b> \xB7 ${esc(p.quantity)}
-  ${remaining(p, today)}${p.opened_date ? " \xB7 aperto " + displayDate(p.opened_date) : ""}`;
+\u2022 <b>${esc(packageLabel(p, ps))}</b> \xB7 ${esc(p.quantity)}${p.opened_date ? "\n  Aperto il " + displayDate(p.opened_date) : ""}`;
   }
   if (!ps.length) text += "\nNessun prodotto in questa vista.";
   text += "\n\nTocca una confezione per gestirla. Le date sono giorni italiani; \u201Coggi\u201D termina a mezzanotte.";
@@ -1339,7 +1338,7 @@ var worker_default = {
         String(env.CHAT_ID)
       );
       return new Response(
-        "Frifrigobot online \xB7 versione 1.2.1" + (route ? " \xB7 gruppo riallineato" : ""),
+        "Frifrigobot online \xB7 versione 1.2.2" + (route ? " \xB7 gruppo riallineato" : ""),
         {
           headers: { "Cache-Control": "no-store" }
         }

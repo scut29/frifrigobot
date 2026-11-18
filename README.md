@@ -51,3 +51,7 @@ Migrazione 0003: pannelli personali e coda persistente per ritentare le cancella
 ## Versione 1.2.1 — migrazione del gruppo
 
 Recupera il nuovo ID se il gruppo è stato convertito in supergruppo. Accetta esclusivamente un redirect confermato dalla Bot API per il gruppo già autorizzato; nomi e campi inoltrati da utenti non autorizzano altri gruppi. La relazione viene conservata in D1 ed è usata anche dal cron. Le confezioni non vengono toccate. Vecchi pannelli, procedure incomplete e cancellazioni riferite al vecchio gruppo vengono invalidati per evitare collisioni tra ID messaggio. 33 test automatici superati.
+
+## Versione 1.2.2
+
+Nell’inventario i giorni rimanenti compaiono solo nell’intestazione della sezione. Sotto gli alimenti rimane la data di apertura, quando presente. La scheda del singolo prodotto e gli avvisi conservano le indicazioni sulla scadenza. Controllo sintattico e test esistente dell’inventario per giorno superati.
