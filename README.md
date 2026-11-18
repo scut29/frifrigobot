@@ -59,3 +59,7 @@ Nell’inventario i giorni rimanenti compaiono solo nell’intestazione della se
 ## Versione 1.2.3
 
 Una riga vuota separa il titolo della categoria dal primo alimento e ciascun prodotto dal successivo.
+
+## Versione 1.2.4
+
+I pulsanti dei prodotti e delle operazioni di apertura usano l’icona alimentare 🍽️ al posto dei lucchetti. Controllo sintattico superato.

@@ -257,7 +257,7 @@ var keys = (inline_keyboard) => ({ inline_keyboard });
 var home = () => keys([
   [btn("\u{1F9CA} Il mio frigo", "list:all:0"), btn("\u2795 Aggiungi prodotto", "add")],
   [
-    btn("\u{1F513} Apri prodotto", "list:closed:0"),
+    btn("\u{1F37D}\uFE0F Apri prodotto", "list:closed:0"),
     btn("\u23F0 Scadenze", "list:due:0")
   ],
   [btn("\u2699\uFE0F Impostazioni", "settings")]
@@ -652,7 +652,7 @@ async function list(plan, mode = "all", page2 = 0) {
     Math.min(page2, Math.max(0, Math.ceil(ps.length / 10) - 1))
   );
   const chunk = ps.slice(page2 * 10, page2 * 10 + 10);
-  let text = mode === "closed" ? "\u{1F513} <b>Scegli una confezione da aprire</b>" : "\u{1F9CA} <b>Il nostro frigo</b>";
+  let text = mode === "closed" ? "\u{1F37D}\uFE0F <b>Scegli una confezione da aprire</b>" : "\u{1F9CA} <b>Il nostro frigo</b>";
   let prev = null;
   for (const p of chunk) {
     const g = expiryTitle(p, today);
@@ -670,7 +670,7 @@ async function list(plan, mode = "all", page2 = 0) {
   text += "\n\nTocca una confezione per gestirla. Le date sono giorni italiani; \u201Coggi\u201D termina a mezzanotte.";
   const rows = chunk.map((p) => [
     btn(
-      `${!tracksOpening(p) ? "\u{1F4C5}" : p.opened_date ? "\u{1F513}" : "\u{1F4E6}"} ${packageLabel(p, ps)}`,
+      `\u{1F37D}\uFE0F ${packageLabel(p, ps)}`,
       `item:${p.id}`
     )
   ]);
@@ -687,7 +687,7 @@ function card(plan, p) {
   if (!p.finished) {
     if (tracksOpening(p) && !p.opened_date)
       rows.push([
-        btn("\u{1F513} Apri oggi", `open:${v}`),
+        btn("\u{1F37D}\uFE0F Apri oggi", `open:${v}`),
         btn("\u{1F4C5} Apertura precedente", `date:${v}`)
       ]);
     rows.push([
@@ -697,7 +697,7 @@ function card(plan, p) {
   } else rows.push([btn("\u21A9\uFE0F Ripristina", `restore:${v}`)]);
   rows.push([btn("\u{1F9CA} Inventario", "list:all:0")]);
   plan.send(
-    `${p.finished ? "\u2705" : "\u{1F4E6}"} <b>${esc(p.name)}</b>
+    `${p.finished ? "\u2705" : "\u{1F37D}\uFE0F"} <b>${esc(p.name)}</b>
 ${esc(p.quantity)}${p.category ? " \xB7 " + esc(p.category) : ""}
 Confezione: ${displayDate(p.original_date)}${tracksOpening(p) ? `
 Dopo apertura: ${p.after_days} giorni
@@ -732,7 +732,7 @@ async function change(plan, p, patch) {
 ${next.finished ? "Confezione terminata." : remaining(next, rome().date) + " \xB7 scadenza " + displayDate(expiry(next))}`,
     keys([
       [btn("\u21A9\uFE0F Annulla operazione", `undo:${undoId}`)],
-      [btn("\u{1F4E6} Dettagli", `item:${p.id}`), btn("\u{1F9CA} Inventario", "list:all:0")]
+      [btn("\u{1F37D}\uFE0F Dettagli", `item:${p.id}`), btn("\u{1F9CA} Inventario", "list:all:0")]
     ]),
     {},
     "EXISTS(SELECT 1 FROM products WHERE id=? AND last_event=?)",
@@ -763,7 +763,7 @@ async function askDays(plan, d) {
       btn(`Usa ${t.after_days} giorni`, `wiz:${token}:days:${t.after_days}`)
     ]);
   rows.push([btn("\u{1F4C5} Solo scadenza", `wiz:${token}:noopening`)]);
-  rows.push([btn("\u{1F513} Giorni dopo apertura", `wiz:${token}:customdays`)]);
+  rows.push([btn("\u{1F37D}\uFE0F Giorni dopo apertura", `wiz:${token}:customdays`)]);
   rows.push([btn("Annulla", `cancel:${token}`)]);
   plan.send(
     `<b>${esc(d.name)}</b>
@@ -796,7 +796,7 @@ Scadenza confezione: ${displayDate(d.original_date)}${d.category ? "\nCategoria:
     keys([
       [
         btn("\u2705 Salva", `wiz:${token}:save`),
-        ...tracksOpening(d) ? [btn("\u{1F513} Salva e apri oggi", `wiz:${token}:saveopen`)] : []
+        ...tracksOpening(d) ? [btn("\u{1F37D}\uFE0F Salva e apri oggi", `wiz:${token}:saveopen`)] : []
       ],
       [
         btn("\u{1F4E6} Numero confezioni", `wiz:${token}:count`),
@@ -1339,7 +1339,7 @@ var worker_default = {
         String(env.CHAT_ID)
       );
       return new Response(
-        "Frifrigobot online \xB7 versione 1.2.3" + (route ? " \xB7 gruppo riallineato" : ""),
+        "Frifrigobot online \xB7 versione 1.2.4" + (route ? " \xB7 gruppo riallineato" : ""),
         {
           headers: { "Cache-Control": "no-store" }
         }
