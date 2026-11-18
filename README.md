@@ -55,3 +55,7 @@ Recupera il nuovo ID se il gruppo è stato convertito in supergruppo. Accetta es
 ## Versione 1.2.2
 
 Nell’inventario i giorni rimanenti compaiono solo nell’intestazione della sezione. Sotto gli alimenti rimane la data di apertura, quando presente. La scheda del singolo prodotto e gli avvisi conservano le indicazioni sulla scadenza. Controllo sintattico e test esistente dell’inventario per giorno superati.
+
+## Versione 1.2.3
+
+Una riga vuota separa il titolo della categoria dal primo alimento e ciascun prodotto dal successivo.
