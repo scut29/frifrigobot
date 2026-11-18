@@ -142,7 +142,7 @@ function expiryTitle(p, today) {
   const e = expiry(p);
   if (!e) return "\u26AA Senza scadenza indicata";
   const n = daysBetween(today, e);
-  return n < 0 ? "\u{1F534} Scaduti" : n === 0 ? "\u{1F7E0} Da consumare oggi" : n === 1 ? "\u{1F7E1} Entro domani" : `\u{1F7E2} Restano ${n} giorni`;
+  return n < 0 ? n < -10 ? "\u{1F534} Scaduti da oltre 10 giorni" : `\u{1F534} Scaduti da ${-n} ${n === -1 ? "giorno" : "giorni"}` : n === 0 ? "\u{1F7E0} Da consumare oggi" : n === 1 ? "\u{1F7E1} Entro domani" : `\u{1F7E2} Restano ${n} giorni`;
 }
 function packageLabel(p, ps) {
   const same = ps.filter((x) => x.name === p.name);
@@ -150,8 +150,12 @@ function packageLabel(p, ps) {
   return `${p.name}${suffix}`;
 }
 function sorted(ps, today) {
+  const rank = (p) => {
+    const e = expiry(p), n = e ? daysBetween(today, e) : Infinity;
+    return n < 0 ? Math.min(-n, 11) : 12 + n;
+  };
   return [...ps].sort(
-    (a, b) => (expiry(a) || "9999").localeCompare(expiry(b) || "9999") || a.name.localeCompare(b.name) || a.id.localeCompare(b.id)
+    (a, b) => rank(a) - rank(b) || (expiry(a) || "9999").localeCompare(expiry(b) || "9999") || a.name.localeCompare(b.name) || a.id.localeCompare(b.id)
   );
 }
 function remaining(p, today) {
@@ -1339,7 +1343,7 @@ var worker_default = {
         String(env.CHAT_ID)
       );
       return new Response(
-        "Frifrigobot online \xB7 versione 1.2.4" + (route ? " \xB7 gruppo riallineato" : ""),
+        "Frifrigobot online \xB7 versione 1.2.5" + (route ? " \xB7 gruppo riallineato" : ""),
         {
           headers: { "Cache-Control": "no-store" }
         }

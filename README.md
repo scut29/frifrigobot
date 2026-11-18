@@ -63,3 +63,7 @@ Una riga vuota separa il titolo della categoria dal primo alimento e ciascun pro
 ## Versione 1.2.4
 
 I pulsanti dei prodotti e delle operazioni di apertura usano l’icona alimentare 🍽️ al posto dei lucchetti. Controllo sintattico superato.
+
+### Versione 1.2.5
+
+Gli scaduti sono suddivisi per giorno da 1 a 10, seguiti da una categoria oltre 10 giorni. Il tempo trascorso compare solo nel titolo della categoria. Verificati due test mirati su inventario e raggruppamento degli scaduti.
