@@ -142,7 +142,7 @@ function expiryTitle(p, today) {
   const e = expiry(p);
   if (!e) return "\u26AA Senza scadenza indicata";
   const n = daysBetween(today, e);
-  return n < 0 ? n < -10 ? "\u{1F534} Scaduti da oltre 10 giorni" : `\u{1F534} Scaduti da ${-n} ${n === -1 ? "giorno" : "giorni"}` : n === 0 ? "\u{1F7E0} Da consumare oggi" : n === 1 ? "\u{1F7E1} Entro domani" : `\u{1F7E2} Restano ${n} giorni`;
+  return n < 0 ? n < -10 ? "\u{1F534} Scaduti da oltre 10 giorni" : `\u{1F534} Scaduti da ${-n} ${n === -1 ? "giorno" : "giorni"}` : n === 0 ? "\u{1F7E0} Da consumare oggi" : n === 1 ? "\u{1F7E1} Entro domani a mezzanotte" : `\u{1F7E2} Restano ${n} giorni`;
 }
 function packageLabel(p, ps) {
   const same = ps.filter((x) => x.name === p.name);
@@ -162,7 +162,7 @@ function remaining(p, today) {
   const e = expiry(p);
   if (!e) return "nessuna scadenza indicata";
   const n = daysBetween(today, e);
-  return n < 0 ? `scaduto da ${-n} giorni` : n === 0 ? "entro oggi" : n === 1 ? "entro domani" : `restano ${n} giorni`;
+  return n < 0 ? `scaduto da ${-n} giorni` : n === 0 ? "entro oggi" : n === 1 ? "entro domani a mezzanotte" : `restano ${n} giorni`;
 }
 function csv(ps) {
   const cols = [
@@ -1343,7 +1343,7 @@ var worker_default = {
         String(env.CHAT_ID)
       );
       return new Response(
-        "Frifrigobot online \xB7 versione 1.2.5" + (route ? " \xB7 gruppo riallineato" : ""),
+        "Frifrigobot online \xB7 versione 1.2.6" + (route ? " \xB7 gruppo riallineato" : ""),
         {
           headers: { "Cache-Control": "no-store" }
         }
