@@ -75,3 +75,7 @@ La dicitura diventa «Entro domani a mezzanotte», anche nei dettagli e negli av
 ### Versione 1.2.7 — pannello sotto i promemoria
 
 Quando un messaggio del bot arriva dopo il pannello, la prossima interazione ricrea il pannello in fondo alla chat e rimuove quello precedente soltanto dopo la consegna. Il promemoria resta visibile più in alto. Nei tocchi successivi il pannello viene aggiornato sul posto. Le procedure dei due utenti restano indipendenti. Nessuna migrazione del database. Superati 36 test automatici, inclusi promemoria seguito da interazioni dei due utenti, conservazione del promemoria e retry del nuovo invio senza eliminare prima il vecchio pannello.
+
+### Versione 1.2.8
+
+La scritta diventa «Entro domani alle 00.00». Anche la nota finale usa 00.00. Modifica del solo testo.

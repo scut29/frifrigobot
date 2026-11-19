@@ -1,4 +1,4 @@
-// src/activation.js
+// frifrigobot/src/activation.js
 var page = (content, status = 200) => new Response(
   `<!doctype html><html lang="it"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Attiva Frifrigobot</title><style>body{font:18px system-ui;max-width:540px;margin:8vh auto;padding:24px;background:#f2f8f5;color:#173d32}main{padding:28px;border-radius:20px;background:white}input,button{font:inherit;box-sizing:border-box;width:100%;padding:14px;margin-top:12px;border:1px solid #bdd4c9;border-radius:10px}button{background:#176b50;color:white;cursor:pointer}p{line-height:1.5}label{display:block}</style><main><h1>\u{1F9CA} Frifrigobot</h1>${content}</main></html>`,
   {
@@ -90,7 +90,7 @@ async function activation(request, env) {
   }
 }
 
-// src/domain.js
+// frifrigobot/src/domain.js
 var fmt = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Europe/Rome",
   year: "numeric",
@@ -142,7 +142,7 @@ function expiryTitle(p, today) {
   const e = expiry(p);
   if (!e) return "\u26AA Senza scadenza indicata";
   const n = daysBetween(today, e);
-  return n < 0 ? n < -10 ? "\u{1F534} Scaduti da oltre 10 giorni" : `\u{1F534} Scaduti da ${-n} ${n === -1 ? "giorno" : "giorni"}` : n === 0 ? "\u{1F7E0} Da consumare oggi" : n === 1 ? "\u{1F7E1} Entro domani a mezzanotte" : `\u{1F7E2} Restano ${n} giorni`;
+  return n < 0 ? n < -10 ? "\u{1F534} Scaduti da oltre 10 giorni" : `\u{1F534} Scaduti da ${-n} ${n === -1 ? "giorno" : "giorni"}` : n === 0 ? "\u{1F7E0} Da consumare oggi" : n === 1 ? "\u{1F7E1} Entro domani alle 00.00" : `\u{1F7E2} Restano ${n} giorni`;
 }
 function packageLabel(p, ps) {
   const same = ps.filter((x) => x.name === p.name);
@@ -162,7 +162,7 @@ function remaining(p, today) {
   const e = expiry(p);
   if (!e) return "nessuna scadenza indicata";
   const n = daysBetween(today, e);
-  return n < 0 ? `scaduto da ${-n} giorni` : n === 0 ? "entro oggi" : n === 1 ? "entro domani a mezzanotte" : `restano ${n} giorni`;
+  return n < 0 ? `scaduto da ${-n} giorni` : n === 0 ? "entro oggi" : n === 1 ? "entro domani alle 00.00" : `restano ${n} giorni`;
 }
 function csv(ps) {
   const cols = [
@@ -255,7 +255,7 @@ function readCSV(text) {
   });
 }
 
-// src/worker.js
+// frifrigobot/src/worker.js
 var btn = (text, callback_data) => ({ text, callback_data });
 var keys = (inline_keyboard) => ({ inline_keyboard });
 var home = () => keys([
@@ -676,7 +676,7 @@ async function list(plan, mode = "all", page2 = 0) {
 \u2022 <b>${esc(packageLabel(p, ps))}</b> \xB7 ${esc(p.quantity)}${p.opened_date ? "\n  Aperto il " + displayDate(p.opened_date) : ""}`;
   }
   if (!ps.length) text += "\nNessun prodotto in questa vista.";
-  text += "\n\nTocca una confezione per gestirla. Le date sono giorni italiani; \u201Coggi\u201D termina a mezzanotte.";
+  text += "\n\nTocca una confezione per gestirla. Le date sono giorni italiani; \u201Coggi\u201D termina alle 00.00.";
   const rows = chunk.map((p) => [
     btn(`\u{1F37D}\uFE0F ${packageLabel(p, ps)}`, `item:${p.id}`)
   ]);
@@ -1345,7 +1345,7 @@ var worker_default = {
         String(env.CHAT_ID)
       );
       return new Response(
-        "Frifrigobot online \xB7 versione 1.2.7" + (route ? " \xB7 gruppo riallineato" : ""),
+        "Frifrigobot online \xB7 versione 1.2.8" + (route ? " \xB7 gruppo riallineato" : ""),
         {
           headers: { "Cache-Control": "no-store" }
         }
