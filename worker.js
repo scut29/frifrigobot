@@ -504,8 +504,13 @@ async function deliverPanel(env, r, p, now) {
     delete body._session;
     delete body._keep;
     const kind = body.reply_markup?.force_reply ? "prompt" : "inline";
+    const latest = await one(
+      env.DB,
+      "SELECT MAX(message_id) AS message_id FROM outbox WHERE status='sent' AND created_at>=COALESCE((SELECT substr(changed_at,1,24) FROM chat_route WHERE current_id=? LIMIT 1),'')",
+      String(env.CHAT_ID)
+    );
     let messageId = null;
-    if (kind === "inline" && panel.kind === "inline" && panel.message_id) {
+    if (kind === "inline" && panel.kind === "inline" && panel.message_id && !(latest?.message_id > panel.message_id)) {
       try {
         await telegram(env, "editMessageText", {
           ...body,
@@ -673,10 +678,7 @@ async function list(plan, mode = "all", page2 = 0) {
   if (!ps.length) text += "\nNessun prodotto in questa vista.";
   text += "\n\nTocca una confezione per gestirla. Le date sono giorni italiani; \u201Coggi\u201D termina a mezzanotte.";
   const rows = chunk.map((p) => [
-    btn(
-      `\u{1F37D}\uFE0F ${packageLabel(p, ps)}`,
-      `item:${p.id}`
-    )
+    btn(`\u{1F37D}\uFE0F ${packageLabel(p, ps)}`, `item:${p.id}`)
   ]);
   const nav = [];
   if (page2) nav.push(btn("\u2190", `list:${mode}:${page2 - 1}`));
@@ -1343,7 +1345,7 @@ var worker_default = {
         String(env.CHAT_ID)
       );
       return new Response(
-        "Frifrigobot online \xB7 versione 1.2.6" + (route ? " \xB7 gruppo riallineato" : ""),
+        "Frifrigobot online \xB7 versione 1.2.7" + (route ? " \xB7 gruppo riallineato" : ""),
         {
           headers: { "Cache-Control": "no-store" }
         }
